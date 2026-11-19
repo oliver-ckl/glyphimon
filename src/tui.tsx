@@ -1,4 +1,6 @@
 import { Plugin } from "@opencode/plugin/tui"
+import { Show } from "solid-js"
+import { Gallery } from "./components/gallery.tsx"
 import { PetPanel } from "./components/pet-panel.tsx"
 import type { Activity } from "./animations.ts"
 import {
@@ -8,44 +10,57 @@ import {
   shouldSeedFromZero,
   toolCategory,
 } from "./events.ts"
+import { generateName, validateName } from "./names.ts"
 import { resolveThresholds } from "./options.ts"
+import { GlyphimonRpc } from "./rpc.ts"
 import { chooseFamily } from "./sprites/index.ts"
+import type { FamilyId } from "./sprites/types.ts"
 import {
+  addTokens,
   createInitialState,
   recordUsage,
+  renameActive,
   replaceState,
+  resetCollection,
   seedSession,
   type EvolutionEvent,
   type GlyphimonState,
 } from "./state.ts"
 
-function initialName(): string {
-  return "Pip"
+function freshState(
+  now: number,
+  previous?: FamilyId,
+  existing: string[] = [],
+): GlyphimonState {
+  const family = chooseFamily(previous, Math.random)
+  return createInitialState(
+    now,
+    family,
+    generateName(family, existing, Math.random),
+    crypto.randomUUID(),
+  )
 }
 
 export default Plugin.define({
   id: "glyphimon.tui",
   setup(context) {
     const thresholds = resolveThresholds(context.options?.thresholds)
-    const initial = createInitialState(
-      Date.now(),
-      chooseFamily(undefined, Math.random),
-      initialName(),
-      crypto.randomUUID(),
-    )
+    const initial = freshState(Date.now())
     const [state, updateState] = context.storage.store("state", { initial })
+    const [ui, updateUi] = context.storage.store("ui", {
+      initial: { petHidden: false },
+    })
     const [activity, updateActivity] = context.storage.memory("activity", {
       initial: { kind: "idle" as Activity },
     })
 
+    void context.data.location.command
+      .sync(context.location)
+      .catch((error) => console.error("[glyphimon] command sync failed", error))
+
     const version = (state as unknown as { version?: number }).version
     if (version !== 1 || !state.active) {
-      const fresh = createInitialState(
-        Date.now(),
-        chooseFamily(undefined, Math.random),
-        initialName(),
-        crypto.randomUUID(),
-      )
+      const fresh = freshState(Date.now())
       void updateState((draft) => replaceState(draft, fresh))
       context.ui.toast.show({
         title: "Glyphimon",
@@ -80,6 +95,143 @@ export default Plugin.define({
         console.error("[glyphimon]", error)
       })
     }
+
+    const openGallery = () => {
+      if (
+        !context.ui.panel.open("glyphimon.gallery", {
+          presentation: "fullscreen",
+        })
+      ) {
+        context.ui.toast.show({
+          title: "Glyphimon",
+          message: "Open a session first.",
+          variant: "info",
+        })
+      }
+    }
+
+    const handlePetCommand = async (raw: string) => {
+      const input = raw.trim()
+
+      if (!input) {
+        openGallery()
+        return
+      }
+
+      if (input === "hide") {
+        await updateUi((draft) => {
+          draft.petHidden = true
+        })
+        return
+      }
+
+      if (input === "show") {
+        await updateUi((draft) => {
+          draft.petHidden = false
+        })
+        return
+      }
+
+      if (input === "toggle") {
+        await updateUi((draft) => {
+          draft.petHidden = !draft.petHidden
+        })
+        return
+      }
+
+      if (input === "reset") {
+        const confirmed = await context.ui.dialog.confirm({
+          title: "Reset Glyphimon?",
+          message: "This clears your active pet and the entire gallery.",
+          label: { confirm: "Reset", cancel: "Cancel" },
+        })
+        if (!confirmed) return
+        const family = chooseFamily(undefined, Math.random)
+        const fresh = resetCollection(
+          Date.now(),
+          family,
+          generateName(family, [], Math.random),
+          crypto.randomUUID(),
+        )
+        enqueue(async () => {
+          await updateState((draft) => replaceState(draft, fresh))
+        })
+        context.ui.toast.show({
+          title: "Glyphimon",
+          message: "A new egg appeared.",
+          variant: "info",
+        })
+        return
+      }
+
+      if (input.startsWith("rename ")) {
+        const name = input.slice("rename ".length).trim()
+        const error = validateName(name)
+        if (error) {
+          context.ui.toast.show({
+            title: "Glyphimon",
+            message: error,
+            variant: "error",
+          })
+          return
+        }
+        enqueue(async () => {
+          await updateState((draft) =>
+            replaceState(draft, renameActive(draft, name)),
+          )
+        })
+        context.ui.toast.show({
+          title: "Glyphimon",
+          message: `Renamed to ${name}.`,
+          variant: "success",
+        })
+        return
+      }
+
+      if (
+        input.startsWith("debug ") &&
+        process.env.GLYPHIMON_DEBUG === "1"
+      ) {
+        const amount = Number.parseInt(input.slice("debug ".length).trim(), 10)
+        if (!Number.isFinite(amount) || amount <= 0) {
+          context.ui.toast.show({
+            title: "Glyphimon",
+            message: "Usage: /pet debug <tokens>",
+            variant: "info",
+          })
+          return
+        }
+        const result = addTokens(
+          state as unknown as GlyphimonState,
+          amount,
+          Date.now(),
+          thresholds,
+        )
+        enqueue(async () => {
+          await updateState((draft) => replaceState(draft, result.state))
+        })
+        for (const evolution of result.evolved) {
+          context.ui.toast.show({
+            title: "Glyphimon",
+            message: `${state.active.name} reached ${evolution.to}`,
+            variant: "success",
+          })
+        }
+        return
+      }
+
+      context.ui.toast.show({
+        title: "Glyphimon",
+        message: "Try /pet, /pet rename <name>, or /pet reset.",
+        variant: "info",
+      })
+    }
+
+    const rpc = context.client.rpc(GlyphimonRpc)
+    const unsubRpc = rpc.events.on("command", (event) => {
+      const text = (event.data as { text?: unknown }).text
+      if (typeof text === "string") void handlePetCommand(text)
+    })
 
     const unsubUsage = context.data.on("session.usage.updated", (event) => {
       enqueue(async () => {
@@ -189,7 +341,26 @@ export default Plugin.define({
           state={state as unknown as GlyphimonState}
           activity={activity.kind}
           thresholds={thresholds}
+          hidden={ui.petHidden}
+          onToggleHidden={() => {
+            void updateUi((draft) => {
+              draft.petHidden = !draft.petHidden
+            })
+          }}
+          onOpenGallery={openGallery}
         />
+      ),
+    })
+
+    const unregisterGallery = context.ui.slot({
+      append: "session.panel",
+      render: (panel) => (
+        <Show when={panel.name === "glyphimon.gallery"}>
+          <Gallery
+            panel={panel}
+            state={state as unknown as GlyphimonState}
+          />
+        </Show>
       ),
     })
 
@@ -202,7 +373,9 @@ export default Plugin.define({
       unsubFailed()
       unsubInterrupted()
       if (activityTimer) clearTimeout(activityTimer)
+      unsubRpc()
       unregister()
+      unregisterGallery()
     }
   },
 })

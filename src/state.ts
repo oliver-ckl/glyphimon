@@ -279,3 +279,34 @@ export function addTokens(
 export function replaceState(draft: GlyphimonState, next: GlyphimonState): void {
   Object.assign(draft, next)
 }
+
+export function sortRetired(pets: Pet[]): Pet[] {
+  return [...pets].sort(
+    (left, right) => (right.retiredAt ?? 0) - (left.retiredAt ?? 0),
+  )
+}
+
+export function columnsFor(width: number): number {
+  if (width >= 100) return 4
+  if (width >= 70) return 3
+  return 2
+}
+
+export function renameActive(
+  state: GlyphimonState,
+  name: string,
+): GlyphimonState {
+  return {
+    ...state,
+    active: { ...state.active, name },
+  }
+}
+
+export function resetCollection(
+  now: number,
+  family: FamilyId,
+  name: string,
+  id: string,
+): GlyphimonState {
+  return createInitialState(now, family, name, id)
+}

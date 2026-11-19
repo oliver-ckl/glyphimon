@@ -59,6 +59,9 @@ export const PetPanel: Component<{
   state: GlyphimonState
   activity: Activity
   thresholds: Thresholds
+  hidden: boolean
+  onToggleHidden: () => void
+  onOpenGallery: () => void
 }> = (props) => {
   const context = usePlugin()
   const [tick, setTick] = createSignal(0)
@@ -132,6 +135,21 @@ export const PetPanel: Component<{
     return `${formatTokens(props.state.active.tokens)} / ${formatTokens(value.next)}`
   }
 
+  if (props.hidden) {
+    return (
+      <box
+        onMouseDown={props.onToggleHidden}
+        borderStyle="single"
+        borderColor={borderColor()}
+        padding={0}
+      >
+        <text fg={mutedColor()} wrapMode="none">
+          🐾 {displayName()} · show
+        </text>
+      </box>
+    )
+  }
+
   return (
     <box
       borderStyle="rounded"
@@ -142,7 +160,11 @@ export const PetPanel: Component<{
       flexDirection="column"
       padding={1}
     >
-      <box flexDirection="row" justifyContent="center">
+      <box
+        flexDirection="row"
+        justifyContent="center"
+        onMouseDown={props.onOpenGallery}
+      >
         <SpriteView
           sprite={{ grid: grid() }}
           palette={family().palette}
@@ -153,9 +175,18 @@ export const PetPanel: Component<{
         {stageLabel()}
       </text>
       <XpBar ratio={progress().ratio} width={18} label={barLabel()} />
-      <text fg={mutedColor()} wrapMode="none">
-        /pet
-      </text>
+      <box flexDirection="row" gap={1}>
+        <box onMouseDown={props.onOpenGallery}>
+          <text fg={mutedColor()} wrapMode="none">
+            [gallery]
+          </text>
+        </box>
+        <box onMouseDown={props.onToggleHidden}>
+          <text fg={mutedColor()} wrapMode="none">
+            [hide]
+          </text>
+        </box>
+      </box>
     </box>
   )
 }
