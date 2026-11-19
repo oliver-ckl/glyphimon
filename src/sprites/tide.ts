@@ -1,0 +1,208 @@
+import type { Family, Palette, Sprite } from "./types.ts"
+
+const PALETTE: Palette = {
+  o: "#0c2233",
+  a: "#3aa6b9",
+  b: "#1f6f8b",
+  c: "#9be7e0",
+  d: "#ffd6a5",
+  e: "#102a33",
+  f: "#f4ffff",
+}
+
+const egg: Sprite = {
+  grid: [
+    "....................",
+    "....................",
+    "....................",
+    ".........ooo........",
+    ".......ooaaaoo......",
+    "......oacaaaaao.....",
+    ".....oacccaaaaao....",
+    ".....occcccaaaao....",
+    "....oacccccdaaaao...",
+    "....oacdcccaaaaao...",
+    "....oaacccaaaaaao...",
+    "....oaaacaaaadaao...",
+    "....oaaadaaabbbao...",
+    "....oaaaaaabbbbbo...",
+    "....oaaaadabbbbbo...",
+    ".....oaaaaabdbbb....",
+    ".....oaaaaaabbbo....",
+    "......oaaaaaabo.....",
+    ".......ooaaaoo......",
+    ".........ooo........",
+  ],
+}
+
+const baby: Sprite = {
+  grid: [
+    "....................",
+    "....................",
+    "....................",
+    "..........o.........",
+    ".........oco........",
+    "........occco.......",
+    ".........oco........",
+    "........ooooo.......",
+    "......ooaaaaaoo.....",
+    ".....ooacaaaaaoo....",
+    ".....oacccaaaaao....",
+    ".....occfccafaao....",
+    "...doaacecaaebaod...",
+    "...oooaacaaabbboo...",
+    ".....oaaaaabbbbb....",
+    ".....ooaaaaabbbo....",
+    "......ooaaaaabo.....",
+    "......oooooooo......",
+    "......oo....oo......",
+    "....................",
+  ],
+  eyes: [
+    [8, 12],
+    [12, 12],
+  ],
+}
+
+const teen: Sprite = {
+  grid: [
+    "..........d.........",
+    ".........odo........",
+    ".........odo........",
+    "........ooooo.......",
+    ".......ocaaaao......",
+    "......ocfcaafoo.....",
+    "......oaeaaaeao.....",
+    "......ooaaaaaoo.....",
+    ".......oaaaaao......",
+    "........ooooo....o..",
+    ".......ooaaaoo..oo..",
+    "....oooaaaaaaaoood..",
+    "....oooaaaaabaoodo..",
+    "....oooaaaabbbodoo..",
+    "....oooaaaabbboooo..",
+    "......oaaaabbboooo..",
+    ".......ooaaabo.ooo..",
+    ".......oooooo...oo..",
+    ".......oo..oo....o..",
+    "....................",
+  ],
+  eyes: [
+    [8, 6],
+    [12, 6],
+  ],
+}
+
+const builder: Sprite = {
+  grid: [
+    "......dd....dd......",
+    "......dd.dd.dd......",
+    "......dd.dd.dd......",
+    ".......e....e.......",
+    ".......oooooo.......",
+    ".......ooaaaoo......",
+    ".......oaaaaao......",
+    "......oaaaaaaao.....",
+    ".......oaaaaao......",
+    ".......ooaaaoo......",
+    "......ooooooooo.....",
+    ".ooo.oobbbbbbboo.ooo",
+    "ooaooobbbbbbbbboooao",
+    "oaaaoobbbbbbbboooaaa",
+    "aaaboobbbbbbbboobaaa",
+    "oaabooobbbbbbboobaaa",
+    "ooaoo.oobbbbboo.ooao",
+    ".ooo..oooooooo...ooo",
+    "......ooo..ooo......",
+    "....................",
+  ],
+  eyes: [
+    [7, 3],
+    [12, 3],
+  ],
+}
+
+const scholar: Sprite = {
+  grid: [
+    "....................",
+    "....................",
+    "....................",
+    "..........o.........",
+    ".......ocoaooo......",
+    "......occcaaaao.....",
+    ".....occcccaaaao....",
+    ".....oacfcaafaao....",
+    ".....oaaeaaaeaao....",
+    ".....oaaaaaaaaao....",
+    ".....oaaaaaaaaao....",
+    "......oaaafaaao.....",
+    ".....b.obcffoob.....",
+    ".....b..fffff.b.....",
+    ".....b..bfff..b.....",
+    ".....b..b.fb..b.....",
+    ".....b..b..b..b.....",
+    ".....b..b..b..b.....",
+    ".....o..o..o..o.....",
+    "....................",
+  ],
+  eyes: [
+    [8, 8],
+    [12, 8],
+  ],
+}
+
+const tinkerer: Sprite = {
+  grid: [
+    "....................",
+    "....................",
+    "....................",
+    "........ooooo.......",
+    ".......occccco......",
+    "......oooccoooo.....",
+    "......ooeccoeco.....",
+    "......oocccccoo.....",
+    ".......occocco....oo",
+    ".......oooaooo...doo",
+    "......ooaaaaaoo..dd.",
+    "....oooaaaaaaaoo.dd.",
+    "....ooaaaaaabaoo.dd.",
+    "....ooaaaaabbboo.dd.",
+    "....ooaaaaabbboo....",
+    "......oaaaabbbo.....",
+    "......ooaaaaboo.....",
+    ".....oooooaoooo.....",
+    ".....ooo..o.ooo.....",
+    "....................",
+  ],
+  eyes: [
+    [8, 6],
+    [12, 6],
+  ],
+}
+
+export const FAMILY_TIDE: Family = {
+  id: "tide",
+  name: "Tide",
+  blurb: "Pearl-shelled drifters that learn the shape of every current.",
+  babyName: "Dewdrop",
+  teenName: "Ripplefin",
+  sprites: { egg, baby, teen },
+  finals: {
+    builder: {
+      name: "Reefguard",
+      title: "Builder",
+      sprite: builder,
+    },
+    scholar: {
+      name: "Tide Oracle",
+      title: "Scholar",
+      sprite: scholar,
+    },
+    tinkerer: {
+      name: "Bubbletink",
+      title: "Tinkerer",
+      sprite: tinkerer,
+    },
+  },
+  palette: PALETTE,
+}
