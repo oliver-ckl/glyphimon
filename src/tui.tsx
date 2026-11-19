@@ -1,6 +1,15 @@
 import { Plugin } from "@opencode/plugin/tui"
-import { SpriteView } from "./components/sprite.tsx"
-import { TEST_PALETTE, TEST_SPRITE } from "./sprites/test-pattern.ts"
+import { PetPanel } from "./components/pet-panel.tsx"
+import { DEFAULT_THRESHOLDS } from "./options.ts"
+import { addTokens, createInitialState } from "./state.ts"
+
+const now = Date.now()
+const demo = addTokens(
+  createInitialState(now, "cinder", "Pip", "demo"),
+  4_500_000,
+  now,
+  DEFAULT_THRESHOLDS,
+).state
 
 export default Plugin.define({
   id: "glyphimon.tui",
@@ -14,11 +23,7 @@ export default Plugin.define({
     return context.ui.slot({
       append: "sidebar.content",
       render: () => (
-        <SpriteView
-          sprite={TEST_SPRITE}
-          palette={TEST_PALETTE}
-          surface="#0b0f14"
-        />
+        <PetPanel state={demo} activity="idle" thresholds={DEFAULT_THRESHOLDS} />
       ),
     })
   },
