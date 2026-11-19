@@ -116,7 +116,9 @@ export function evolutionMessages(
 ): string[] {
   const name = state.active.name
   return events.map((event) => {
-    if (event.to === "baby") return `${name} hatched into ${family.babyName}!`
+    if (event.to === "baby") {
+      return `${name} hatched into ${family.babyName} — ${family.name} family!`
+    }
     if (event.to === "teen") return `${name} grew into ${family.teenName}!`
     if (event.to === "final") {
       const final = family.finals[event.nature ?? "scholar"]

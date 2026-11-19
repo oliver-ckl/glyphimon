@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode/plugin/tui"
-import { Show } from "solid-js"
+import { Show, createEffect, type Component } from "solid-js"
 import { Gallery } from "./components/gallery.tsx"
 import { PetPanel } from "./components/pet-panel.tsx"
 import {
@@ -11,6 +11,9 @@ import {
   isDuplicateEvent,
   pruneByTimestamp,
   pruneSessionBaselines,
+  rememberToolCall,
+  resolveToolName,
+  shouldHandleCommand,
   shouldSeedFromZero,
   toolCategory,
 } from "./events.ts"
@@ -47,6 +50,14 @@ function freshState(
   )
 }
 
+const SessionTracker: Component<{
+  id: string
+  onID: (id: string) => void
+}> = (props) => {
+  createEffect(() => props.onID(props.id))
+  return null
+}
+
 export default Plugin.define({
   id: "glyphimon.tui",
   setup(context) {
@@ -56,6 +67,10 @@ export default Plugin.define({
     const [ui, updateUi] = context.storage.store("ui", {
       initial: { petHidden: false },
     })
+    const [currentSession, updateCurrentSession] = context.storage.memory(
+      "currentSession",
+      { initial: { id: "" } },
+    )
     const [activity, updateActivity] = context.storage.memory("activity", {
       initial: { kind: "idle" as Activity },
     })
@@ -307,8 +322,18 @@ export default Plugin.define({
 
     const rpc = context.client.rpc(GlyphimonRpc)
     const unsubRpc = rpc.events.on("command", (event) => {
-      const text = (event.data as { text?: unknown }).text
-      if (typeof text === "string") void handlePetCommand(text)
+      const data = event.data as { text?: unknown; sessionID?: unknown }
+      if (typeof data.text !== "string") return
+      const origin = typeof data.sessionID === "string" ? data.sessionID : ""
+      if (!shouldHandleCommand(origin, currentSession.id)) return
+      void handlePetCommand(data.text).catch((error) => {
+        console.error("[glyphimon] command failed", error)
+        context.ui.toast.show({
+          title: "Glyphimon",
+          message: "The pet command failed. Try again.",
+          variant: "error",
+        })
+      })
     })
 
     const unsubUsage = context.data.on("session.usage.updated", (event) => {
@@ -360,8 +385,16 @@ export default Plugin.define({
       })
     })
 
+    const toolNames = new Map<string, string>()
+    const unsubToolName = context.data.on(
+      "session.tool.input.started",
+      (event) => {
+        rememberToolCall(toolNames, event.data.id, event.data.name)
+      },
+    )
+
     const unsubTool = context.data.on("session.tool.success", (event) => {
-      const category = toolCategory(event.data.id)
+      const category = toolCategory(resolveToolName(toolNames, event.data.id))
       if (!category) return
 
       enqueue(async () => {
@@ -384,7 +417,7 @@ export default Plugin.define({
     })
 
     const unsubToolCalled = context.data.on("session.tool.called", (event) => {
-      const category = toolCategory(event.data.id)
+      const category = toolCategory(resolveToolName(toolNames, event.data.id))
       if (category) setActivity({ tool: category }, 1500, "thinking")
     })
 
@@ -408,19 +441,29 @@ export default Plugin.define({
 
     const unregister = context.ui.slot({
       append: "sidebar.content",
-      render: () => (
-        <PetPanel
-          state={state as unknown as GlyphimonState}
-          activity={activity.kind}
-          thresholds={thresholds}
-          hidden={ui.petHidden}
-          onToggleHidden={() => {
-            void updateUi((draft) => {
-              draft.petHidden = !draft.petHidden
-            })
-          }}
-          onOpenGallery={openGallery}
-        />
+      render: (input) => (
+        <box flexDirection="column">
+          <SessionTracker
+            id={input.sessionID}
+            onID={(id) => {
+              updateCurrentSession((draft) => {
+                draft.id = id
+              })
+            }}
+          />
+          <PetPanel
+            state={state as unknown as GlyphimonState}
+            activity={activity.kind}
+            thresholds={thresholds}
+            hidden={ui.petHidden}
+            onToggleHidden={() => {
+              void updateUi((draft) => {
+                draft.petHidden = !draft.petHidden
+              })
+            }}
+            onOpenGallery={openGallery}
+          />
+        </box>
       ),
     })
 
@@ -439,6 +482,7 @@ export default Plugin.define({
     return () => {
       unsubUsage()
       unsubTool()
+      unsubToolName()
       unsubStarted()
       unsubToolCalled()
       unsubSucceeded()

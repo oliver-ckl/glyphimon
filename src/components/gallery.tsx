@@ -82,7 +82,13 @@ const PetCard: Component<{
         {form()}
       </text>
       <text fg={props.mutedColor} wrapMode="none">
+        {family().name} family
+      </text>
+      <text fg={props.mutedColor} wrapMode="none">
         {props.pet.nature ?? "scholar"} · {formatTokens(props.pet.tokens)}
+      </text>
+      <text fg={props.mutedColor} wrapMode="none">
+        hatched {formatDate(props.pet.hatchedAt ?? props.pet.createdAt)}
       </text>
       <text fg={props.mutedColor} wrapMode="none">
         retired {formatDate(props.pet.retiredAt)}
@@ -168,10 +174,16 @@ export const Gallery: Component<{
             {activeForm()}
           </text>
           <text fg={mutedColor()} wrapMode="none">
+            {activeFamily().name} family
+          </text>
+          <text fg={mutedColor()} wrapMode="none">
             {formatTokens(props.state.active.tokens)} fresh tokens
           </text>
           <text fg={mutedColor()} wrapMode="none">
-            hatched {formatDate(props.state.active.createdAt)}
+            {props.state.active.stage === "egg" ? "egg laid" : "hatched"}{" "}
+            {formatDate(
+              props.state.active.hatchedAt ?? props.state.active.createdAt,
+            )}
           </text>
         </box>
 

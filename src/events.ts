@@ -23,6 +23,7 @@ const SCHOLAR_TOOLS = new Set([
 const TINKERER_TOOLS = new Set([
   "bash",
   "task",
+  "subagent",
   "todowrite",
   "background",
   "pty",
@@ -35,6 +36,36 @@ export function toolCategory(tool: string): Nature | null {
   if (SCHOLAR_TOOLS.has(name)) return "scholar"
   if (TINKERER_TOOLS.has(name)) return "tinkerer"
   return null
+}
+
+export function rememberToolCall(
+  registry: Map<string, string>,
+  callID: string,
+  name: string | undefined,
+): void {
+  if (!name) return
+  registry.delete(callID)
+  registry.set(callID, name)
+  while (registry.size > 2000) {
+    const oldest = registry.keys().next().value
+    if (!oldest) break
+    registry.delete(oldest)
+  }
+}
+
+export function resolveToolName(
+  registry: Map<string, string>,
+  callID: string,
+  fallback = "",
+): string {
+  return registry.get(callID) ?? fallback
+}
+
+export function shouldHandleCommand(
+  originSessionID: string,
+  currentSessionID: string,
+): boolean {
+  return !currentSessionID || originSessionID === currentSessionID
 }
 
 export function shouldSeedFromZero(

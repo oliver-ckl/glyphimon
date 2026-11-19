@@ -4,6 +4,9 @@ import {
   isDuplicateEvent,
   pruneByTimestamp,
   pruneSessionBaselines,
+  rememberToolCall,
+  resolveToolName,
+  shouldHandleCommand,
   shouldSeedFromZero,
   toolCategory,
 } from "../src/events.ts"
@@ -13,7 +16,18 @@ test("tool categories map the expected tools", () => {
   assert.equal(toolCategory("edit"), "builder")
   assert.equal(toolCategory("read"), "scholar")
   assert.equal(toolCategory("bash"), "tinkerer")
+  assert.equal(toolCategory("shell"), "tinkerer")
+  assert.equal(toolCategory("subagent"), "tinkerer")
   assert.equal(toolCategory("mystery"), null)
+})
+
+test("tool call ids resolve to their tool names", () => {
+  const registry = new Map<string, string>()
+  rememberToolCall(registry, "call_abc", "edit")
+  assert.equal(resolveToolName(registry, "call_abc"), "edit")
+  assert.equal(toolCategory(resolveToolName(registry, "call_abc")), "builder")
+  assert.equal(resolveToolName(registry, "call_missing", "read"), "read")
+  assert.equal(resolveToolName(registry, "call_missing"), "")
 })
 
 test("new non-forked sessions count from zero; old or forked sessions do not", () => {
@@ -41,4 +55,10 @@ test("session baselines keep the newest seen sessions", () => {
     Object.keys(pruneSessionBaselines(baselines, seen, 2)).sort(),
     ["b", "c"],
   )
+})
+
+test("commands are handled only for the current session", () => {
+  assert.equal(shouldHandleCommand("s1", "s1"), true)
+  assert.equal(shouldHandleCommand("s1", ""), true)
+  assert.equal(shouldHandleCommand("s1", "s2"), false)
 })

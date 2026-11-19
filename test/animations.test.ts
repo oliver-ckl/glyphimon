@@ -68,6 +68,7 @@ test("evolution messages name each new stage and the final nature", () => {
     evolutionState,
   )
   assert.ok(messages[0].includes("hatched"))
+  assert.ok(messages[0].includes("Cinder"))
   assert.ok(messages[1].includes("Forgeclaw"))
 })
 

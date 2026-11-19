@@ -124,3 +124,34 @@ test("a final pet left over from a closed TUI is handed over on startup", () => 
   assert.equal(reconciled.active.stage, "egg")
   assert.equal(reconciled.active.id, "pet-2")
 })
+
+function usage(input: number) {
+  return {
+    input,
+    output: 0,
+    reasoning: 0,
+    cache: { read: 0, write: 0 },
+  }
+}
+
+test("a lower cumulative usage does not lower the stored baseline", () => {
+  let state = seedSession(createInitialState(NOW, "cinder", "Pip", "pet-1"), "s1")
+  let result = recordUsage(state, "s1", usage(100), NOW, THRESHOLDS)
+  assert.equal(result.fresh, 100)
+  result = recordUsage(result.state, "s1", usage(50), NOW, THRESHOLDS)
+  assert.equal(result.fresh, 0)
+  result = recordUsage(result.state, "s1", usage(120), NOW, THRESHOLDS)
+  assert.equal(result.fresh, 20)
+  assert.equal(result.state.active.tokens, 120)
+})
+
+test("hatching records the hatch time", () => {
+  const result = addTokens(
+    createInitialState(NOW, "cinder", "Pip", "pet-1"),
+    10,
+    NOW + 5,
+    THRESHOLDS,
+  )
+  assert.equal(result.state.active.stage, "baby")
+  assert.equal(result.state.active.hatchedAt, NOW + 5)
+})

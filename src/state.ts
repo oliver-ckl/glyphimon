@@ -22,6 +22,7 @@ export type Pet = {
   nature?: Nature
   createdAt: number
   stageAt: number
+  hatchedAt?: number
   retiredAt?: number
 }
 
@@ -95,6 +96,20 @@ export function usageDelta(current: TokenUsage, previous: TokenUsage): TokenUsag
     cache: {
       read: Math.max(0, next.cache.read - base.cache.read),
       write: Math.max(0, next.cache.write - base.cache.write),
+    },
+  }
+}
+
+function maxUsage(current: TokenUsage, previous: TokenUsage): TokenUsage {
+  const next = normalizeUsage(current)
+  const base = normalizeUsage(previous)
+  return {
+    input: Math.max(next.input, base.input),
+    output: Math.max(next.output, base.output),
+    reasoning: Math.max(next.reasoning, base.reasoning),
+    cache: {
+      read: Math.max(next.cache.read, base.cache.read),
+      write: Math.max(next.cache.write, base.cache.write),
     },
   }
 }
@@ -180,6 +195,7 @@ export function recordUsage(
   }
 
   const fresh = freshTokens(usageDelta(current, previous))
+  const baseline = maxUsage(current, previous)
   const next: GlyphimonState = {
     ...state,
     active:
@@ -189,7 +205,7 @@ export function recordUsage(
     totalFreshTokens: state.totalFreshTokens + fresh,
     sessionBaselines: {
       ...state.sessionBaselines,
-      [sessionID]: current,
+      [sessionID]: baseline,
     },
     sessionSeenAt: {
       ...state.sessionSeenAt,
@@ -211,7 +227,12 @@ export function advanceEvolution(
 
   if (active.stage === "egg" && active.tokens >= thresholds.hatch) {
     evolved.push({ petID: active.id, from: "egg", to: "baby" })
-    active = { ...active, stage: "baby", stageAt: now }
+    active = {
+      ...active,
+      stage: "baby",
+      stageAt: now,
+      hatchedAt: active.hatchedAt ?? now,
+    }
   }
 
   if (active.stage === "baby" && active.tokens >= thresholds.teen) {

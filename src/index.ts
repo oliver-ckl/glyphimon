@@ -11,9 +11,9 @@ export default Plugin.define({
         name: "pet",
         description:
           "Open the Glyphimon gallery, or hide/show/toggle the sidebar pet",
-        execute: async ({ prompt }) => {
+        execute: async ({ sessionID, prompt }) => {
           const text = prompt.text.replace(/^\/pet\b\s*/, "").trim()
-          await registration.events.emit("command", { text })
+          await registration.events.emit("command", { text, sessionID })
         },
       })
     })

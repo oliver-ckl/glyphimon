@@ -9,8 +9,9 @@ export const GlyphimonRpc = Rpc.define({
         type: "object",
         properties: {
           text: { type: "string" },
+          sessionID: { type: "string" },
         },
-        required: ["text"],
+        required: ["text", "sessionID"],
         additionalProperties: false,
       },
     },

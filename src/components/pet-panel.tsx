@@ -1,5 +1,6 @@
 import { usePlugin } from "@opencode/plugin/tui"
 import {
+  Show,
   createSignal,
   onCleanup,
   onMount,
@@ -18,6 +19,7 @@ import {
 } from "../animations.ts"
 import { FAMILIES } from "../sprites/index.ts"
 import type { GlyphimonState, Thresholds } from "../state.ts"
+import { createPanelVisibility } from "./panel-visibility.ts"
 import { SpriteView } from "./sprite.tsx"
 import { XpBar } from "./xp-bar.tsx"
 
@@ -65,6 +67,7 @@ export const PetPanel: Component<{
 }> = (props) => {
   const context = usePlugin()
   const [tick, setTick] = createSignal(0)
+  const visible = createPanelVisibility(() => props.hidden)
 
   onMount(() => {
     const timer = setInterval(() => setTick((value) => value + 1), 250)
@@ -93,9 +96,9 @@ export const PetPanel: Component<{
     if (pet.stage === "egg") return "Egg · waiting to hatch"
     const form = formNameForPet(pet, family())
     if (pet.stage === "final") {
-      return `${form} · ${pet.nature ?? "scholar"}`
+      return `${family().name} · ${form} · ${pet.nature ?? "scholar"}`
     }
-    return form
+    return `${family().name} · ${form}`
   }
 
   const grid = () => {
@@ -139,58 +142,59 @@ export const PetPanel: Component<{
     return `${formatTokens(props.state.active.tokens)} / ${formatTokens(value.next)}`
   }
 
-  if (props.hidden) {
-    return (
-      <box
-        onMouseDown={props.onToggleHidden}
-        borderStyle="single"
-        borderColor={borderColor()}
-        padding={0}
-      >
-        <text fg={mutedColor()} wrapMode="none">
-          🐾 {displayName()} · show
-        </text>
-      </box>
-    )
-  }
-
   return (
-    <box
-      borderStyle="rounded"
-      borderColor={borderColor()}
-      backgroundColor={SURFACE}
-      title={displayName()}
-      titleAlignment="left"
-      flexDirection="column"
-      padding={1}
+    <Show
+      when={visible()}
+      fallback={
+        <box
+          onMouseDown={props.onToggleHidden}
+          borderStyle="single"
+          borderColor={borderColor()}
+          padding={0}
+        >
+          <text fg={mutedColor()} wrapMode="none">
+            🐾 {displayName()} · show
+          </text>
+        </box>
+      }
     >
       <box
-        flexDirection="row"
-        justifyContent="center"
-        onMouseDown={props.onOpenGallery}
+        borderStyle="rounded"
+        borderColor={borderColor()}
+        backgroundColor={SURFACE}
+        title={displayName()}
+        titleAlignment="left"
+        flexDirection="column"
+        padding={1}
       >
-        <SpriteView
-          sprite={{ grid: grid() }}
-          palette={family().palette}
-          surface={SURFACE}
-        />
-      </box>
-      <text fg={textColor()} wrapMode="none">
-        {stageLabel()}
-      </text>
-      <XpBar ratio={progress().ratio} width={18} label={barLabel()} />
-      <box flexDirection="row" gap={1}>
-        <box onMouseDown={props.onOpenGallery}>
-          <text fg={mutedColor()} wrapMode="none">
-            [gallery]
-          </text>
+        <box
+          flexDirection="row"
+          justifyContent="center"
+          onMouseDown={props.onOpenGallery}
+        >
+          <SpriteView
+            sprite={{ grid: grid() }}
+            palette={family().palette}
+            surface={SURFACE}
+          />
         </box>
-        <box onMouseDown={props.onToggleHidden}>
-          <text fg={mutedColor()} wrapMode="none">
-            [hide]
-          </text>
+        <text fg={textColor()} wrapMode="none">
+          {stageLabel()}
+        </text>
+        <XpBar ratio={progress().ratio} width={18} label={barLabel()} />
+        <box flexDirection="row" gap={1}>
+          <box onMouseDown={props.onOpenGallery}>
+            <text fg={mutedColor()} wrapMode="none">
+              [gallery]
+            </text>
+          </box>
+          <box onMouseDown={props.onToggleHidden}>
+            <text fg={mutedColor()} wrapMode="none">
+              [hide]
+            </text>
+          </box>
         </box>
       </box>
-    </box>
+    </Show>
   )
 }
