@@ -80,6 +80,20 @@ A compact card appended to the sidebar:
 - Egg wobble and cracks as hatching approaches.
 - Name, stage, and a small fresh-token progress bar.
 - Nature stays hidden until the final evolution.
+- Click the sprite or `[gallery]` to open the gallery; click `[hide]` to collapse the card.
+- A collapsed `🐾 <name> · show` row remains clickable so the pet can be brought back.
+
+### Commands
+
+A server-side `/pet` command emits an RPC event that the TUI consumes:
+
+- `/pet` opens the gallery.
+- `/pet hide`, `/pet show`, `/pet toggle` control the sidebar card.
+- `/pet rename <name>` renames the active pet.
+- `/pet reset` clears the collection after confirmation.
+- `/pet debug <tokens>` adds test tokens when `GLYPHIMON_DEBUG=1`.
+
+Clickable controls are the primary mouse path; the slash command is the keyboard path.
 
 ### Gallery
 
@@ -94,7 +108,7 @@ A compact card appended to the sidebar:
 ## Persistence
 
 - Durable TUI storage, global across projects and sessions.
-- Stores the active pet, gallery, per-session baselines, and deduplicated usage-event and tool-call IDs.
+- Stores the active pet, gallery, per-session baselines, deduplicated usage-event and tool-call IDs, and the sidebar visibility preference.
 - Prunes old session, usage-event, and tool-call records to keep the state small.
 - State is local to the machine. Multiple simultaneously open TUIs are guarded against double-counting by event and tool-call ID deduplication.
 
