@@ -8,6 +8,7 @@ import {
   finalizeRetired,
   freshTokens,
   recordUsage,
+  reconcileFinalState,
   seedSession,
   selectNature,
   usageDelta,
@@ -109,4 +110,17 @@ test("threshold options fall back per field when invalid", () => {
     teen: DEFAULT_THRESHOLDS.teen,
     final: DEFAULT_THRESHOLDS.final,
   })
+})
+
+test("a final pet left over from a closed TUI is handed over on startup", () => {
+  const final = addTokens(
+    createInitialState(NOW, "cinder", "Pip", "pet-1"),
+    30,
+    NOW,
+    THRESHOLDS,
+  ).state
+  const reconciled = reconcileFinalState(final, NOW + 1, "tide", "Mira", "pet-2")
+  assert.equal(reconciled.gallery.length, 1)
+  assert.equal(reconciled.active.stage, "egg")
+  assert.equal(reconciled.active.id, "pet-2")
 })

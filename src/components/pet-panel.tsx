@@ -111,6 +111,10 @@ export const PetPanel: Component<{
     if (activity === "thinking") {
       next = overlay(next, THINKING, 15, 1)
     } else if (activity === "success") {
+      if (tick() % 2 === 0) {
+        const width = next[0]?.length ?? 0
+        next = [...next.slice(1), ".".repeat(width)]
+      }
       next = overlay(next, SPARKLE, 14, 1)
     } else if (activity === "failure") {
       next = overlay(next, SWEAT, 15, 2)

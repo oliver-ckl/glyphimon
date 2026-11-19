@@ -3,6 +3,8 @@ import assert from "node:assert/strict"
 import {
   bob,
   eggCrackLevel,
+  evolutionMessages,
+  finalEvent,
   formNameForPet,
   overlay,
   spriteForPet,
@@ -50,5 +52,31 @@ test("form names and sprites follow the stage and nature", () => {
   assert.equal(
     spriteForPet(final.active, FAMILY_CINDER),
     FAMILY_CINDER.finals.scholar.sprite,
+  )
+})
+
+const EVOLUTION_NOW = 1_700_000_000_000
+const evolutionState = createInitialState(EVOLUTION_NOW, "cinder", "Pip", "p")
+
+test("evolution messages name each new stage and the final nature", () => {
+  const messages = evolutionMessages(
+    [
+      { petID: "p", from: "egg", to: "baby" },
+      { petID: "p", from: "teen", to: "final", nature: "builder" },
+    ],
+    FAMILY_CINDER,
+    evolutionState,
+  )
+  assert.ok(messages[0].includes("hatched"))
+  assert.ok(messages[1].includes("Forgeclaw"))
+})
+
+test("finalEvent finds the final transition", () => {
+  assert.equal(
+    finalEvent([
+      { petID: "p", from: "egg", to: "baby" },
+      { petID: "p", from: "teen", to: "final", nature: "builder" },
+    ])?.to,
+    "final",
   )
 })

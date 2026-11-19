@@ -1,5 +1,11 @@
 import type { Family, Nature, Sprite } from "./sprites/types.ts"
-import type { Pet, PetStage, Thresholds } from "./state.ts"
+import type {
+  EvolutionEvent,
+  GlyphimonState,
+  Pet,
+  PetStage,
+  Thresholds,
+} from "./state.ts"
 
 export type Activity =
   | "idle"
@@ -101,4 +107,27 @@ export function formNameForPet(pet: Pet, family: Family): string {
   if (pet.stage === "baby") return family.babyName
   if (pet.stage === "teen") return family.teenName
   return family.finals[pet.nature ?? "scholar"].name
+}
+
+export function evolutionMessages(
+  events: EvolutionEvent[],
+  family: Family,
+  state: GlyphimonState,
+): string[] {
+  const name = state.active.name
+  return events.map((event) => {
+    if (event.to === "baby") return `${name} hatched into ${family.babyName}!`
+    if (event.to === "teen") return `${name} grew into ${family.teenName}!`
+    if (event.to === "final") {
+      const final = family.finals[event.nature ?? "scholar"]
+      return `${name} evolved into ${final.name} — ${final.title}!`
+    }
+    return `${name} reached ${event.to}.`
+  })
+}
+
+export function finalEvent(
+  events: EvolutionEvent[],
+): EvolutionEvent | undefined {
+  return events.find((event) => event.to === "final")
 }

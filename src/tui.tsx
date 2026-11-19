@@ -2,7 +2,11 @@ import { Plugin } from "@opencode/plugin/tui"
 import { Show } from "solid-js"
 import { Gallery } from "./components/gallery.tsx"
 import { PetPanel } from "./components/pet-panel.tsx"
-import type { Activity } from "./animations.ts"
+import {
+  evolutionMessages,
+  finalEvent,
+  type Activity,
+} from "./animations.ts"
 import {
   isDuplicateEvent,
   pruneByTimestamp,
@@ -13,11 +17,13 @@ import {
 import { generateName, validateName } from "./names.ts"
 import { resolveThresholds } from "./options.ts"
 import { GlyphimonRpc } from "./rpc.ts"
-import { chooseFamily } from "./sprites/index.ts"
+import { FAMILIES, chooseFamily } from "./sprites/index.ts"
 import type { FamilyId } from "./sprites/types.ts"
 import {
   addTokens,
   createInitialState,
+  finalizeRetired,
+  reconcileFinalState,
   recordUsage,
   renameActive,
   replaceState,
@@ -69,7 +75,32 @@ export default Plugin.define({
       })
     }
 
+    if (state.active?.stage === "final") {
+      const finalPet = state.active
+      const family = chooseFamily(finalPet.family, Math.random)
+      const name = generateName(
+        family,
+        state.gallery.map((pet) => pet.name),
+        Math.random,
+      )
+      const next = reconcileFinalState(
+        state as unknown as GlyphimonState,
+        Date.now(),
+        family,
+        name,
+        crypto.randomUUID(),
+      )
+      void updateState((draft) => replaceState(draft, next))
+      context.ui.toast.show({
+        title: "Glyphimon",
+        message: `${finalPet.name} retired to the gallery. A new egg appeared.`,
+        variant: "success",
+      })
+    }
+
     let activityTimer: ReturnType<typeof setTimeout> | undefined
+    let handoverTimer: ReturnType<typeof setTimeout> | undefined
+    let handoverScheduled = false
     const setActivity = (
       kind: Activity,
       resetMs?: number,
@@ -94,6 +125,59 @@ export default Plugin.define({
       queue = queue.then(task).catch((error) => {
         console.error("[glyphimon]", error)
       })
+    }
+
+    const handOverFinal = () => {
+      handoverScheduled = false
+      enqueue(async () => {
+        const finalPet = state.active
+        if (finalPet.stage !== "final") return
+
+        const existing = state.gallery.map((pet) => pet.name)
+        const family = chooseFamily(finalPet.family, Math.random)
+        const name = generateName(family, existing, Math.random)
+        const next = finalizeRetired(
+          state as unknown as GlyphimonState,
+          Date.now(),
+          family,
+          name,
+          crypto.randomUUID(),
+        )
+        await updateState((draft) => replaceState(draft, next))
+        context.ui.toast.show({
+          title: "Glyphimon",
+          message: `${finalPet.name} retired to the gallery. A new egg appeared.`,
+          variant: "success",
+        })
+      })
+    }
+
+    const scheduleHandover = () => {
+      if (handoverScheduled) return
+      handoverScheduled = true
+      if (handoverTimer) clearTimeout(handoverTimer)
+      handoverTimer = setTimeout(handOverFinal, 2400)
+    }
+
+    const showEvolution = (evolved: EvolutionEvent[]) => {
+      if (evolved.length === 0) return
+      const family = FAMILIES[state.active.family]
+      const messages = evolutionMessages(
+        evolved,
+        family,
+        state as unknown as GlyphimonState,
+      )
+      context.ui.toast.show({
+        title: "Glyphimon",
+        message: messages[messages.length - 1]!,
+        variant: "success",
+      })
+      if (finalEvent(evolved)) {
+        setActivity("evolving", 2400, "idle")
+        scheduleHandover()
+      } else {
+        setActivity("evolving", 1200, "idle")
+      }
     }
 
     const openGallery = () => {
@@ -210,13 +294,7 @@ export default Plugin.define({
         enqueue(async () => {
           await updateState((draft) => replaceState(draft, result.state))
         })
-        for (const evolution of result.evolved) {
-          context.ui.toast.show({
-            title: "Glyphimon",
-            message: `${state.active.name} reached ${evolution.to}`,
-            variant: "success",
-          })
-        }
+        showEvolution(result.evolved)
         return
       }
 
@@ -278,13 +356,7 @@ export default Plugin.define({
           evolved.push(...result.evolved)
         })
 
-        for (const evolution of evolved) {
-          context.ui.toast.show({
-            title: "Glyphimon",
-            message: `${state.active.name} reached ${evolution.to}`,
-            variant: "success",
-          })
-        }
+        showEvolution(evolved)
       })
     })
 
@@ -373,6 +445,7 @@ export default Plugin.define({
       unsubFailed()
       unsubInterrupted()
       if (activityTimer) clearTimeout(activityTimer)
+      if (handoverTimer) clearTimeout(handoverTimer)
       unsubRpc()
       unregister()
       unregisterGallery()

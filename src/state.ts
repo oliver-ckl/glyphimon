@@ -310,3 +310,13 @@ export function resetCollection(
 ): GlyphimonState {
   return createInitialState(now, family, name, id)
 }
+
+export function reconcileFinalState(
+  state: GlyphimonState,
+  now: number,
+  nextFamily: FamilyId,
+  nextName: string,
+  nextID: string,
+): GlyphimonState {
+  return finalizeRetired(state, now, nextFamily, nextName, nextID)
+}
